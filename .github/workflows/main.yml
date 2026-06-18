@@ -24,17 +24,12 @@ jobs:
         pip install pyinstaller
         pip install -r backend/requirements.txt
 
-    - name: Build EXE with PyInstaller
+    - name: Build EXE
       run: |
         pyinstaller --onefile --windowed --name "ERP-Lite" --add-data "backend;backend" --add-data "frontend;frontend" --add-data "data;data" --hidden-import=waitress --hidden-import=flask --hidden-import=flask_cors --hidden-import=flask_jwt_extended --hidden-import=bcrypt --hidden-import=openpyxl --hidden-import=yaml --hidden-import=cryptography wsgi.py
 
-    - name: Upload EXE artifact
+    - name: Upload EXE
       uses: actions/upload-artifact@v4
       with:
         name: ERP-Lite
         path: dist/ERP-Lite.exe
-
-    - name: Upload to Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: dist/ERP-Lite.exe
