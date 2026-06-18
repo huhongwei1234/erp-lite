@@ -1,0 +1,1 @@
+import{n as r}from"./index-yAwgFOWa.js";function t(e){return r.post("/purchase/inbound",e)}function u(e){return r.get("/purchase/records",{params:e})}function c(e){return r.get("/purchase/records/export",{params:e})}function o(e){return r.delete(`/purchase/records/${e}`)}export{o as d,c as e,u as g,t as p};

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>ERP Lite - 轻量级ERP系统</title>
+    <script type="module" crossorigin src="/assets/index-yAwgFOWa.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CC7lD82h.css">
+  </head>
+  <body>
+    <div id="app"></div>
+    <script>
+      (function() {
+        var scripts = document.querySelectorAll('script[type="module"]');
+        if (scripts.length > 0) {
+          fetch(scripts[0].src, { method: 'HEAD', cache: 'no-store' }).then(function(r) {
+            var ct = r.headers.get('content-type') || '';
+            if (!r.ok || ct.indexOf('javascript') === -1 && ct.indexOf('js') === -1) {
+              location.href = location.pathname + '?_=' + Date.now();
+            }
+          }).catch(function() {});
+        }
+      })();
+    </script>
+  </body>
+</html>

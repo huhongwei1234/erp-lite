@@ -1,0 +1,1 @@
+import{n as u}from"./index-yAwgFOWa.js";function e(){return u.get("/backup/settings")}function r(t){return u.put("/backup/settings",t)}function s(t){return u.post("/backup/run",t)}export{e as g,s as r,r as u};

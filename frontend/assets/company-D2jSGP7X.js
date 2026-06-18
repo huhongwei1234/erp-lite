@@ -1,0 +1,1 @@
+import{n}from"./index-yAwgFOWa.js";function s(){return n.get("/company")}function u(e){return n.put("/company",e)}function a(){return n.get("/company/users")}function o(e){return n.post("/company/users",e)}function p(e,t){return n.put(`/company/users/${e}`,t)}function c(e){return n.delete(`/company/users/${e}`)}export{s as a,u as b,o as c,c as d,a as g,p as u};

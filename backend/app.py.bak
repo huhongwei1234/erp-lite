@@ -1,0 +1,149 @@
+from flask import Flask, send_from_directory, request, redirect, jsonify
+from flask_jwt_extended import JWTManager, verify_jwt_in_request, get_jwt
+from config import JWT_SECRET_KEY, JWT_ACCESS_TOKEN_EXPIRES, BASE_DIR, PROJECT_DIR, DB_PATH
+import os, re, time, sqlite3
+
+# 初始化Flask应用
+app = Flask(__name__, static_folder=os.path.join(PROJECT_DIR, 'frontend', 'dist'))
+
+# 启动时自动初始化/迁移数据库
+from init_db import init_db
+init_db()
+
+# 启用 SQLite WAL 模式以提高并发性能
+with sqlite3.connect(DB_PATH) as conn:
+    conn.execute('PRAGMA journal_mode=WAL;')
+    conn.execute('PRAGMA synchronous=NORMAL;')
+app.config['JWT_SECRET_KEY'] = JWT_SECRET_KEY
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = JWT_ACCESS_TOKEN_EXPIRES
+
+jwt = JWTManager(app)
+
+# 注册中间件：全局授权检查
+from middleware.license import check_license
+from models.user import UserModel
+
+@app.before_request
+def before_request():
+    result = check_license()
+    if result:
+        return result
+    
+    # 单点登录验证：后登录的踢掉先登录的（登录接口不执行，避免旧 token 干扰）
+    if request.path.startswith('/api/auth/login'):
+        return
+    auth_header = request.headers.get('Authorization', '')
+    if auth_header.startswith('Bearer '):
+        try:
+            verify_jwt_in_request()
+            jwt_data = get_jwt()
+            session_id = jwt_data.get('session_id')
+            user_id = jwt_data.get('sub')
+            if session_id and user_id:
+                user = UserModel.get_by_id(int(user_id))
+                if user and user.get('session_id') and user.get('session_id') != session_id:
+                    print(f'[SSO] session mismatch: user={user_id}, path={request.path}, token_session={session_id}, db_session={user.get("session_id")}')
+                    return jsonify({'code': 401, 'message': '您的账号已在其他地方登录，请重新登录'}), 401
+        except Exception:
+            # JWT 验证异常由端点各自的 @jwt_required 处理
+            pass
+
+# 注册蓝图
+from api.auth import auth_bp
+from api.license_api import license_bp
+from api.products import products_bp
+from api.suppliers import suppliers_bp
+from api.customers import customers_bp
+from api.purchase import purchase_bp
+from api.sale import sale_bp
+from api.inventory import inventory_bp
+from api.financial import financial_bp
+from api.reports import reports_bp
+from api.company import company_bp
+from api.expense import expense_bp
+from api.notice import notices_bp
+from api.backup import backup_bp, init_backup_scheduler
+
+app.register_blueprint(auth_bp)
+app.register_blueprint(license_bp)
+app.register_blueprint(products_bp)
+app.register_blueprint(suppliers_bp)
+app.register_blueprint(customers_bp)
+app.register_blueprint(purchase_bp)
+app.register_blueprint(sale_bp)
+app.register_blueprint(inventory_bp)
+app.register_blueprint(financial_bp)
+app.register_blueprint(reports_bp)
+app.register_blueprint(company_bp)
+app.register_blueprint(expense_bp)
+app.register_blueprint(notices_bp)
+app.register_blueprint(backup_bp)
+
+# 启动备份调度器
+init_backup_scheduler()
+
+@app.route('/reset')
+def reset_cache():
+    """强制刷新页面，绕过浏览器缓存"""
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+        <title>清除缓存</title>
+    </head>
+    <body>
+        <p>正在清除缓存并刷新...</p>
+        <script>
+            if (window.caches) {
+                caches.keys().then(function(names) {
+                    return Promise.all(names.map(function(name) { return caches.delete(name); }));
+                }).then(function() {
+                    location.href = "/?_=" + Date.now();
+                }).catch(function() {
+                    location.href = "/?_=" + Date.now();
+                });
+            } else {
+                location.href = "/?_=" + Date.now();
+            }
+        </script>
+    </body>
+    </html>
+    '''
+
+# 静态文件服务：前端打包后的dist目录
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def serve_frontend(path):
+    dist_dir = os.path.join(PROJECT_DIR, 'frontend', 'dist')
+    # 强制给 URL 添加时间戳参数，彻底绕过 Safari 磁盘缓存（排除 API 和静态资源）
+    if not request.args.get('_') and not path.startswith(('api/', 'assets/', 'favicon.')):
+        return redirect(f'{request.path}?_={int(time.time())}', code=302)
+    if path and os.path.exists(os.path.join(dist_dir, path)):
+        response = send_from_directory(dist_dir, path)
+        response.headers['Cache-Control'] = 'no-cache, must-revalidate'
+        return response
+    # assets 下的文件不存在时返回 404，避免返回 HTML 导致 MIME 类型错误
+    if path.startswith('assets/'):
+        return 'Not Found', 404
+    # 读取 index.html 并注入缓存控制脚本，强制浏览器重新加载
+    index_path = os.path.join(dist_dir, 'index.html')
+    with open(index_path, 'r', encoding='utf-8') as f:
+        html = f.read()
+    _v = str(int(time.time()))
+    html = re.sub(r'(src="/assets/[^"]+)(")', r'\1?v=' + _v + r'\2', html)
+    html = re.sub(r'(href="/assets/[^"]+)(")', r'\1?v=' + _v + r'\2', html)
+    # 注入 chunk 404 自动刷新脚本（放在 </head> 前）
+    refresh_script = '''<script>(function(){var r=false;window.addEventListener('error',function(e){if(e.target&&e.target.tagName==='SCRIPT'&&e.target.src&&e.target.src.indexOf('/assets/')!==-1){if(!r){r=true;location.href=location.pathname+'?_='+Date.now();}}},true);window.addEventListener('unhandledrejection',function(e){var s=e.reason&&e.reason.stack||'';if(s.indexOf('Importing a module script failed')!==-1||s.indexOf('dynamically imported module')!==-1){if(!r){r=true;location.href=location.pathname+'?_='+Date.now();}}});})();</script>'''
+    html = html.replace('</head>', refresh_script + '</head>')
+    response = app.make_response(html)
+    response.headers['Content-Type'] = 'text/html; charset=utf-8'
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    response.headers['Vary'] = '*'
+    return response
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5001, debug=False)

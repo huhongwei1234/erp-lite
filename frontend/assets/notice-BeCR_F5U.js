@@ -1,0 +1,1 @@
+import{n as t}from"./index-yAwgFOWa.js";function o(){return t.get("/notices/visible")}function c(){return t.get("/notices")}function s(e){return t.post("/notices",e)}function r(e,n){return t.put(`/notices/${e}`,n)}function u(e){return t.delete(`/notices/${e}`)}export{c as a,s as c,u as d,o as g,r as u};
