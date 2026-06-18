@@ -24,9 +24,9 @@ jobs:
         pip install pyinstaller
         pip install -r backend/requirements.txt
 
-    - name: Build EXE with PyInstaller
+    - name: Build EXE with PyInstaller (standalone)
       run: |
-        pyinstaller --onefile --windowed --name "ERP-Lite" --add-data "backend;backend" --add-data "frontend;frontend" --add-data "data;data" --hidden-import=waitress --hidden-import=flask --hidden-import=flask_cors --hidden-import=flask_jwt_extended --hidden-import=bcrypt --hidden-import=openpyxl --hidden-import=yaml --hidden-import=cryptography --hidden-import=jinja2 --hidden-import=markupsafe --hidden-import=click --hidden-import=itsdangerous --hidden-import=werkzeug --hidden-import=et_xmlfile --hidden-import=cffi --hidden-import=pycparser --hidden-import=blinker --collect-all waitress --collect-all flask --collect-all flask_cors --collect-all flask_jwt_extended --collect-all bcrypt --collect-all openpyxl --collect-all yaml --collect-all cryptography wsgi.py
+        pyinstaller --onefile --windowed --name "ERP-Lite" --add-data "backend;backend" --add-data "frontend;frontend" --add-data "data;data" --hidden-import=waitress --hidden-import=flask --hidden-import=flask_cors --hidden-import=flask_jwt_extended --hidden-import=bcrypt --hidden-import=openpyxl --hidden-import=yaml --hidden-import=cryptography --hidden-import=jinja2 --hidden-import=markupsafe --hidden-import=click --hidden-import=itsdangerous --hidden-import=werkzeug --hidden-import=et_xmlfile --hidden-import=cffi --hidden-import=pycparser --hidden-import=blinker --collect-all waitress --collect-all flask --collect-all flask_cors --collect-all flask_jwt_extended --collect-all bcrypt --collect-all openpyxl --collect-all pyyaml --collect-all cryptography --collect-all jinja2 --collect-all markupsafe --collect-all click --collect-all itsdangerous --collect-all werkzeug --collect-all et_xmlfile --collect-all cffi --collect-all pycparser --collect-all blinker wsgi.py
 
     - name: Upload EXE
       uses: actions/upload-artifact@v4
